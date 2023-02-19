@@ -12,6 +12,9 @@
 *.cb2
 .*.lb
 
+## l3build
+build/*
+
 ## Intermediate documents:
 *.dvi
 *.xdv

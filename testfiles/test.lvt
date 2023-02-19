@@ -1,0 +1,89 @@
+\input regression-test.tex
+
+\input execute.tex
+
+\catcode`\@=11
+
+
+\def\TYPE@ASSERTATIONFAILED#1{%
+    \TYPE{Assertation failed: \detokenize{#1}}%
+}
+
+% #1 - \macro
+\def\ASSERT@NOTDEFINED#1{%
+    \ifdefined#1%
+        \TYPE@ASSERTATIONFAILED{#1 is unexpected defined.}%
+    \fi%
+}
+
+\def\ASSERT@@empty{}
+
+% #1 - \macro
+\def\ASSERT@EMPTY#1{%
+    \ifdefined#1%
+        \ifx#1\ASSERT@@empty%
+        \else%
+            \TYPE@ASSERTATIONFAILED{#1 is unexpected not empty.}%
+        \fi%
+    \else%
+        \TYPE@ASSERTATIONFAILED{#1 is unexpected undefined.}%
+    \fi%
+}
+
+% #1 - 1st \macro
+% #2 - 2nd \macro
+\def\ASSERT@IFXEQUAL#1#2{%
+    \ifdefined#1%
+        \ifdefined#2%
+            \ifx#1#2%
+            \else%
+                \TYPE@ASSERTATIONFAILED{#1 and #2 are unexpected not equal according to \ifx.}%
+            \fi%
+        \else%
+            \TYPE@ASSERTATIONFAILED{#2 is unexpected undefined.}%
+        \fi%
+    \else
+        \TYPE@ASSERTATIONFAILED{#1 is unexpected undefined.}%
+    \fi%
+}
+
+\START
+
+\TEST{macro}{%
+    \def\todef{incorrect}%
+    \edef\env{%
+        \execute{%
+            \def\todef{correct}%
+        }%
+    }%
+    \ASSERT\todef{correct}%
+    \ASSERT\env\empty%
+}
+
+\newtoks\mytoks
+\TEST{toks}{%
+    \mytoks{incorrect}%
+    \edef\env{%
+        \execute{%
+            \mytoks{correct}%
+        }%
+    }%
+    \ASSERT{\the\mytoks}{correct}%
+    \ASSERT\env\empty%
+}
+    
+\newcount\mycnt%
+\TEST{counts}{%
+    \mycnt11\relax%
+    \edef\env{%
+        \execute{%
+        \multiply\mycnt3\relax%
+        }%
+    }%
+    \ASSERT{\number\mycnt}{33}%
+    \ASSERT\env\empty%
+}
+
+% TODO transfer more tests from execute-test.tex to test.tex
+
+\END
