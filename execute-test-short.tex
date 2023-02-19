@@ -1,0 +1,15 @@
+\input execute %
+
+\tt
+
+\immediate\openout3\jobname.aux %
+
+B% used as breakpoint for gdb
+\edef\a{\execute{\immediate\write3{a}}}%
+C% used as breakpoint for gdb
+
+\meaning\a
+
+\immediate\closeout3 %
+
+\end

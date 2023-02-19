@@ -1,0 +1,331 @@
+% \iffalse
+% !TeX encoding = UTF-8
+% !TeX root = fsrprotocol3-src
+% \fi
+%
+% \FPSCdtxhead{Defining Commands Safely with Restoring}
+%
+%     \section{Internal Implementation}
+%
+% arguments:
+% |#1| - a prefix as a macro, like |\ThisPrefix@|; then all internal commands will be like |\ThisPrefix@...|
+% returns:
+% local \cmd{\defsave@csprefix} - csname of the prefix, |\ThisPrefix@| --> |ThisPrefix@|
+%    \begin{macrocode}
+\newcommand*{\defsaveSetPrefix}[1]{%
+    \edef\defsave@csprefix{%
+        \@gobblescape#1%
+    }%
+}%
+%    \end{macrocode}
+
+% arguments:
+% |#1| - a prefix as a csname, like "ThisPrefix@"; then all internal commands will be like |\ThisPrefix@...|
+%      - will be fully expanded
+% returns:
+% local \cmd{\defsave@csprefix }- csname of the prefix, e.g. |ThisPrefix@|
+%    \begin{macrocode}
+\newcommand*{\defsaveSetPrefixCS}[1]{%
+    \edef\defsave@csprefix{%
+        #1%
+    }%
+}%
+
+\defsaveSetPrefix{\org@}
+
+\newcount\defsave@tempcnt
+%    \end{macrocode}
+
+% arguments:
+% |#1|                - |\macro| to perpare for, e.g. |\ThisCommand|
+% \cmd{\defsave@csprefix} - prefix for the internal definitions, e.g |org@|
+% returns:
+% \cmd{\defsave@cscmd}    - name of the macro without the backslash, e.g is |ThisCommand|, when |#1| is |\ThisCommand|
+% \cmd{\defsave@level}    - level of the top most saved command on the stack
+%                     only use temporary!
+%    \begin{macrocode}
+\def\defsave@prepare#1{%
+    \edef\defsave@cscmd{%
+        \@gobblescape#1%
+    }%
+    \defsave@prepare@impl%
+}%
+%    \end{macrocode}
+
+% arguments:
+% |#1|                - |\macro| to perpare for, e.g. |\ThisCommand|
+% \cmd{\defsave@csprefix} - prefix for the internal definitions, e.g |org@|
+% returns:
+% \cmd{\defsave@cscmd}    - name of the csname, e.g is |ThisCommand|, when |#1| is |\ThisCommand|
+% \cmd{\defsave@level}    - level of the top most saved command on the stack
+%                     only use temporary!
+%    \begin{macrocode}
+\def\defsave@prepareCS#1{%
+    \edef\defsave@cscmd{%
+        #1%
+    }%
+    \defsave@prepare@impl%
+}%
+%    \end{macrocode}
+
+% arguments:
+% \cmd{\defsave@csprefix} - prefix for the internal definitions, e.g |org@|
+% \cmd{\defsave@cscmd}    - name of the macro without the backslash or the csname, e.g is |ThisCommand|, when |#1| is |\ThisCommand|
+% returns:
+% \cmd{\defsave@level}    - level of the top most saved command on the stack
+%                     only use temporary!
+%    \begin{macrocode}
+\def\defsave@prepare@impl{%
+    \letcs{\defsave@level}{\defsave@csprefix\defsave@cscmd @level}%
+}%
+%    \end{macrocode}
+
+% |#1| - macro to save its definition on the top of the stack
+%    \begin{macrocode}
+\def\defsave@pushOnStack#1{%
+    \edef\defsave@cscmd{%
+        \@gobblescape#1%
+    }%
+    \defsave@pushOnStack@impl%
+    \cslet{\defsave@csprefix\defsave@cscmd @\defsave@level}{#1}%
+}%
+%    \end{macrocode}
+
+% |#1| - csname to save its definition on the top of the stack
+%    \begin{macrocode}
+\def\defsave@pushOnStackCS#1{%
+    \edef\defsave@cscmd{%
+        #1%
+    }%
+    \defsave@pushOnStack@impl%
+    \csletcs{\defsave@csprefix\defsave@cscmd @\defsave@level}{#1}%
+}%
+%    \end{macrocode}
+
+% arguments:
+% \cmd{\defsave@csprefix} - prefix for the internal definitions
+% \cmd{\defsave@cscmd}    - name of the macro without the backslash or the csname
+% The current level of the stack for the given command
+% returns:
+% \cmd{\defsave@level}    - new level of the top most saved command on the stack for the given command
+%                     increased by one; Only use temporary!
+%    \begin{macrocode}
+\def\defsave@pushOnStack@impl{%
+    % if the internal level command is not yet definied it is assumed to be -1 (next is 0)
+    \ifcsundef{\defsave@csprefix\defsave@cscmd @level}{%
+        \csdef{\defsave@csprefix\defsave@cscmd @level}{0}%
+    }{% else increase level
+        \defsave@tempcnt\csuse{\defsave@csprefix\defsave@cscmd @level}\relax%
+        \advance\defsave@tempcnt\@ne%
+        \csedef{\defsave@csprefix\defsave@cscmd @level}{\the\defsave@tempcnt}%
+    }%
+    % \defsave@level is only used temporary.
+    \letcs{\defsave@level}{\defsave@csprefix\defsave@cscmd @level}%
+}%
+%    \end{macrocode}
+
+% |#1| - macro to restore its definition from the top of the stack
+%    \begin{macrocode}
+\def\defsave@popFromStack#1{%
+    \letcs{#1}{\defsave@csprefix\defsave@cscmd @\defsave@level}%
+    \defsave@popFromStack@impl%
+}%
+%    \end{macrocode}
+
+% |#1| - csname to restore its definition from the top of the stack
+%    \begin{macrocode}
+\def\defsave@popFromStackCS#1{%
+    \csletcs{#1}{\defsave@csprefix\defsave@cscmd @\defsave@level}%
+    \defsave@popFromStack@impl%
+}%
+%    \end{macrocode}
+
+% arguments:
+% \cmd{\defsave@csprefix} - prefix for the internal definitions
+% \cmd{\defsave@cscmd}    - name of the macro without the backslash or the csname
+% The current level of the stack for the given command
+% returns:
+% \cmd{\defsave@level}    - new level of the top most saved command on the stack for the given command
+%                     decreased by one; Only use temporary!
+%    \begin{macrocode}
+\def\defsave@popFromStack@impl{%
+    \csundef{\defsave@csprefix\defsave@cscmd @\defsave@level}%
+    % if the internal level command is 0, undef it, because next would be -1
+    \ifcsstring{\defsave@csprefix\defsave@cscmd @level}{0}{%
+        \csundef{\defsave@csprefix\defsave@cscmd @level}%
+    }{% else decrease level
+        \defsave@tempcnt\csuse{\defsave@csprefix\defsave@cscmd @level}\relax%
+        \advance\defsave@tempcnt\m@ne%
+        \csedef{\defsave@csprefix\defsave@cscmd @level}{\the\defsave@tempcnt}%
+    }%
+}%
+%    \end{macrocode}
+
+%     \section{Defining User Commands}
+
+% |#1| - to define \cmd{\def} like macro
+% |#2| - tokens for command definition, e.g. \cmd{\def}, \cmd{\edef}, \cmd{\long}\cmd{\gdef} or \cmd{\xdef}
+%    \begin{macrocode}
+\def\defsave@definer@def#1#2{%
+    % ##1 - to \def macro
+    % parametertext and definition follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepare##1%
+        \defsave@pushOnStack##1%
+        #2##1% then comes the parameter text and the definition
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\csdef} like macro
+% |#2| - tokens for command definition, e.g. \cmd{\def}, \cmd{\edef}, \cmd{\long}\cmd{\gdef} or \cmd{\xdef}
+%    \begin{macrocode}
+\def\defsave@definer@csdef#1#2{%
+    % ##1 - to \csdef csname
+    % parametertext and definition follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepareCS{##1}%
+        \defsave@pushOnStackCS{##1}%
+        #2##1% then comes the parameter text and the definition
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\let} like macro
+% |#2| - tokens for the \cmd{\let} command assignment
+%    \begin{macrocode}
+\def\defsave@definer@let#1#2{%
+    % ##1 - to \let macro
+    % macro to copy from follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepare##1%
+        \defsave@pushOnStack##1%
+        #2##1% macro to copy from follows
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\cslet} like macro
+% |#2| - tokens for the \cmd{\cslet} command assignment
+%    \begin{macrocode}
+\def\defsave@definer@cslet#1#2{%
+    % ##1 - to \cslet csname
+    % macro to copy from follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepareCS{##1}%
+        \defsave@pushOnStackCS{##1}%
+        #2{##1}% macro to copy from follows
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\letcs} like macro
+% |#2| - tokens for the \cmd{\letcs} command assignment
+%    \begin{macrocode}
+\def\defsave@definer@letcs#1#2{%
+    % ##1 - to \letcs macro
+    % csname to copy from follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepare##1%
+        \defsave@pushOnStack##1%
+        #2##1% csname to copy from follows
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\csletcs} like macro
+% |#2| - tokens for the \cmd{\csletcs} command assignment
+%    \begin{macrocode}
+\def\defsave@definer@csletcs#1#2{%
+    % ##1 - to \csletcs csname
+    % csname to copy from follows
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepareCS{##1}%
+        \defsave@pushOnStackCS{##1}%
+        #2{##1}% csname to copy from follows
+    }%
+}%
+%    \end{macrocode}
+
+% TODO distugish between global and local stack
+% Currently the stack is ALWAYS even for e.g. \cmd{\gdefsave} and \cmd{\gletrestore} local.
+
+% TODO dokumnent in cwl
+
+%    \begin{macrocode}
+\defsave@definer@def{\defsave}{\def}
+\defsave@definer@def{\edefsave}{\edef}
+\defsave@definer@def{\gdefsave}{\gdef}
+\defsave@definer@def{\xdefsave}{\xdef}
+\defsave@definer@def{\longdefsave}{\long\def}
+\defsave@definer@def{\longedefsave}{\long\edef}
+\defsave@definer@def{\longgdefsave}{\long\gdef}
+\defsave@definer@def{\longxdefsave}{\long\xdef}
+
+\defsave@definer@csdef{\csdefsave}{\csdef}
+\defsave@definer@csdef{\csedefsave}{\csedef}
+\defsave@definer@csdef{\csgdefsave}{\csgdef}
+\defsave@definer@csdef{\csxdefsave}{\csxdef}
+\defsave@definer@csdef{\longcsdefsave}{\long\csdef}
+\defsave@definer@csdef{\longcsedefsave}{\long\csedef}
+\defsave@definer@csdef{\longcsgdefsave}{\long\csgdef}
+\defsave@definer@csdef{\longcsxdefsave}{\long\csxdef}
+
+\defsave@definer@let{\letsave}{\let}
+\defsave@definer@let{\gletsave}{\global\let}
+
+\defsave@definer@letcs{\letcssave}{\letcs}
+\defsave@definer@letcs{\gletcssave}{\global\letcs}
+
+\defsave@definer@cslet{\csletsave}{\cslet}
+\defsave@definer@cslet{\csgletsave}{\global\cslet}
+
+\defsave@definer@csletcs{\csletcssave}{\csletcs}
+\defsave@definer@csletcs{\csgletcssave}{\global\csletcs}
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\def} or \cmd{\undef} like macro
+% |#2| - tokens for the letcs command assignment from the stack with the csnames e.g. \cmd{\letcs} or \cmd{\global}\cmd{\letcs}
+%      \cmd{\def} or so is not possible
+%    \begin{macrocode}
+\def\letrestore@definer@def#1#2{%
+    % ##1 - macro to restore with the definition currently top most on the stack
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepare##1%
+        #2##1{\defsave@csprefix\defsave@cscmd @\defsave@level}% Their is only 1 expansion of the saved command wanted.
+        \defsave@popFromStack##1%
+    }%
+}%
+%    \end{macrocode}
+
+% |#1| - to define \cmd{\csdef} or \cmd{\csundef} like macro
+% |#2| - tokens for the command assignment from the stack with commands
+%      \cmd{\csdef} or so is not possible
+%    \begin{macrocode}
+\def\letrestore@definer@csdef#1#2{%
+    % ##1 - csname to restore with the definition currently top most on the stack
+    % Obviously this command is not fully expandable.
+    \newcommand{#1}[1]{%
+        \defsave@prepareCS{##1}%
+        #2{##1}{\defsave@csprefix\defsave@cscmd @\defsave@level}% Their is only 1 expansion of the saved command wanted.
+        \defsave@popFromStackCS{##1}%
+    }%
+}%
+%    \end{macrocode}
+
+% TODO dokumnent in cwl
+
+%    \begin{macrocode}
+\letrestore@definer@def{\letrestore}{\letcs}%
+\letrestore@definer@def{\gletrestore}{\global\letcs}%
+
+\letrestore@definer@csdef{\csletrestore}{\csletcs}%
+\letrestore@definer@csdef{\csgletrestore}{\global\csletcs}%
+%    \end{macrocode}

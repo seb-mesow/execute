@@ -1,0 +1,515 @@
+% !TeX encoding = UTF-8
+% !TeX spellcheck = en_US
+
+\hoffset\dimexpr-1in+5mm\relax%
+\voffset\dimexpr-1in+5mm\relax%
+\pagewidth210mm\relax%
+\pageheight297mm\relax%
+\hsize\dimexpr\pagewidth-10mm\relax%
+\vsize\dimexpr\pageheight-10mm\relax%
+\parskip1ex\relax%
+\parindent0pt\relax%
+\leftskip0pt\relax%
+\rightskip0pt plus .5\hsize\relax
+
+\tt\frenchspacing%
+
+\input execute % The space is important!
+
+\def\makeatletter{\catcode64=11 }% The space is important!
+\def\makeatother{\catcode64=12 }% The space is important!
+
+\makeatletter
+\catcode`\_=12 % space important!
+
+\def\section#1{%
+    \def\tempa{========= #1 ==================}%
+    \vskip1.5\baselineskip%
+    {\tt\tempa\par}%
+    \message{^^J\tempa}%
+}%
+
+
+\section{macro test}
+
+\let\mydef\def
+\def\todef{This is the WRONG text.}
+\def\definer{\mydef\todef{This is the right text.}}
+
+old register value: |\meaning\todef|
+
+define env and execute: |\edef\env{\execute{\definer}}| =!= ||
+
+new register value: |\meaning\todef|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+new register value (again): |\meaning\todef|
+
+
+
+\section{toks test}
+
+\newtoks\mytoks
+\mytoks{This are NOT the toks I want.}
+\def\definer{\mytoks{This are the toks I want.}}
+
+old register value: |\detokenize\expandafter{\the\mytoks}|
+
+% WORKS:
+define env and execute: |\edef\env{\execute{\definer}}| =!= ||
+% WORKS TOO:
+% define env and execute: |\edef\env{\immediateassigned{\definer}}|
+% WORKS:
+% define env and execute: |\edef\env{\execute{H\definer H}}|
+% DO NOT WORKS:
+% define env and execute: |\edef\env{\immediateassigned{H\definer H}}|
+
+new register value: |\detokenize\expandafter{\the\mytoks}| =!= ||
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+new register value (again): |\detokenize\expandafter{\the\mytoks}|
+
+
+
+\section{counts test}
+
+\let\myadvance\advance
+\newcount\mycnt
+\mycnt=11\relax
+\def\definer{\myadvance\mycnt11 }% The space is important here!
+
+old register value:|\number\mycnt|
+
+define env and execute: |\edef\env{\execute{\definer}}| =!= ||
+
+new register value: |\number\mycnt| =!= |22|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+new register value (again): |\number\mycnt| =!= |22|
+
+
+
+\section{\string\@defaultunits\ test}
+
+%%% From File: ltfsstrc.dtx
+\def\remove@to@nnil#1\@nnil{}%
+
+%%% From File: ltfssbas.dtx
+% syntax: \@defaultunits<dimen register><length><default unit>\relax\@nnil
+% When <length> has a  unit, then this unit           is used and the <default unit> is gobbled.
+% When <length> has no unit, then the  <default unit> is used and nothing relevant   is gobbled.
+\def\@defaultunits{%
+    \afterassignment\remove@to@nnil%
+}%
+
+\newdimen\mylen
+
+old register value: |\the\mylen|
+
+define env and execute (1): |\edef\env{\execute{\@defaultunits\mylen1cmpt\relax\@nnil}}| =!= ||
+
+new register value (1): |\the\mylen| >! |28pt|
+
+meaning env (1): |\meaning\env| =!= |macro:->|
+
+expand env (1): |\env| =!= ||
+
+define env and execute (2): |\edef\env{\execute{\@defaultunits\mylen1pt\relax\@nnil}}| =!= ||
+
+new register value (2): |\the\mylen| =!= |1.0pt|
+
+meaning env (2): |\meaning\env| =!= |macro:->|
+
+expand env (2): |\env| =!= ||
+
+
+
+\section{\string\relax\ test}
+
+\newcount\mycnt
+\mycnt=11\relax
+\def\definer{\myadvance\mycnt11\relax}
+
+old register value:|\number\mycnt|
+
+define env and execute: |\edef\env{\execute{\definer\relax}}| =!= ||
+
+new register value: |\number\mycnt| =!= |22|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+new register value (again): |\number\mycnt| =!= |22|
+
+
+
+\section{\string\immediate\string\openout\ test}
+
+\let\myimmediate\immediate
+\let\myopenout\openout
+\newwrite\auxout
+
+\def\definer{%
+    \myimmediate\myopenout\auxout\jobname.aux % The space is important here !; for testing scan_filename_text
+}%
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\immediate\string\write\ test}
+
+\let\mywrite\write
+\def\command{this is command}
+\def\a{this is a}
+\def\w{written}
+\def\writtenTextI{I'm text immediately \w\space to the .aux file with \noexpand\command\%\noexpand\a.}
+\def\definer{%
+    \myimmediate\mywrite\auxout{Lua: \writtenTextI}%
+}
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+\myimmediate\mywrite\auxout{TeX: \writtenTextI}%
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\immediate\string\closeout\ test}
+
+\let\mycloseout\closeout
+\def\definer{%
+    \myimmediate\mycloseout\auxout%
+}%
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\openin\ test}
+
+\let\myopenin\openin
+\newread\auxin
+
+\def\definer{%
+    \openin\auxin{\jobname.aux}% for testing scan_general_text
+}%
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\read\ test}
+
+\let\myread\read
+\def\definer{%
+    \read\auxin to\lualine%
+}%
+
+define env and execute: |\edef\env{%
+    \string\endlinechar=\the\endlinechar%
+    \execute{\definer}%
+}|
+
+meaning lualine: |\meaning\lualine|
+
+Note that TeX appends the current \string\endlinechar\ at the end of every read line.
+TeX then converts (an \string\endlinechar\ which is) <return> == \string^\string^M == 13 to a space token.
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\readline\ test}
+
+\let\myreadline\readline
+\def\definer{%
+    \readline\auxin to\texline%
+}%
+
+define env and execute: |\edef\env{%
+    \string\endlinechar=\the\endlinechar%
+    \execute{\definer}%
+}|
+
+meaning texline: |\meaning\texline|
+
+Note that TeX appends the current \string\endlinechar\ at the end of every read line.
+eTeX NOT converts the appended <return> == \string^\string^M == 13 to a space token.
+As with other read characters, except the space, eTeX assigns catcode 12 == other to these characters.
+And other characters are like letters simply typeset.
+In the (O)T1 font encoding at slot/code point 13 == `015 with the Computer Modern Typewriter font cmttxx is the glyph of an apostrophe.
+
+This code after this text in the test TeX file illustrates the issue.%
+\catcode`\^^M=12 ^^M\catcode`\^^M=5 %
+% The space above is important to end the number 5 and the assignment already on that line
+
+meaning env: |\meaning\env|  =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{\string\closein\ test}
+
+\let\myclosein\closein
+\def\definer{%
+    \closein\auxin%
+}%
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+meaning env: |\meaning\env| =!= |\meaning\empty|
+
+expand env: |\env| =!= ||
+
+
+
+\section{latex-env test}
+
+\input latex-env
+
+\def\todef{This is the FALSE text.}
+
+\def\definer{\def\todef{This is the right text: percent <\%>, space <\ >, backslash <\\>}}
+
+old register value:|\meaning\todef|
+\par
+
+\makeatletter
+%\exec@printtokinfo{\%\ \\}
+\par
+
+\ltxenv@start
+
+%\exec@printtokinfo{\%\ \\}
+\par
+define env and execute: |\edef\env{\execute{\%\ \\\definer}}|
+%define env and execute: |\edef\env{\&\ \\}|
+\par
+new register value (\string\meaning): |\meaning\todef|
+\par
+Note that we \string\def'ine the macro \string\todef\ and not \string\edef'ine it.\space
+Though the control symbols that are macros are not yet expanded.
+\par
+new register value (not \string\meaning): |\todef|
+\par
+meaning env: |\meaning\env|
+\ltxenv@end
+\makeatother
+
+expand env: |\env|
+
+new register value (again): |\meaning\todef|
+
+
+
+\section{\string\filedate\ test}
+
+\input latex-plain
+
+\makeatletter
+
+% #1 - year  as a string representing an integer
+% #2 - month as a string representing an integer
+% #3 - day   as a string representing an integer
+\def\rp@dateformat#1#2#3{%
+    \four@digits{#1}/\two@digits{#2}/\two@digits{#3}%
+}%
+
+\def\filedate{%
+    \rp@dateformat{\the\year}{\the\month}{\the\day}%
+}%
+
+\def\todef{This is NOT the current date.}
+\def\definer{\edef\todef{\execute{The current date is \filedate.}}}
+
+old register value:|\meaning\todef|
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+new register value: |\meaning\todef|
+
+meaning env: |\meaning\env|
+
+expand env: |\env|
+
+new register value (again): |\meaning\todef|
+
+\section{\string\expandafter\ test}
+
+\newcount\testcnt
+\testcnt0 % space important!
+
+\def\first{\advance\testcnt1 }%
+\def\second{\multiply\testcnt2 }%
+
+|\execute\expandafter{\expandafter\second\execute\expandafter{\first}}| =!= ||
+
+\the\testcnt\ =!= 2
+
+% TODO \begingroup \endgroup test
+
+\section{\string\begingroup\ \& \string\endgroup\ test}
+
+\let\A@token=A
+
+\def\definer{%
+    \begingroup%
+    \futurelet\let@token\definer@i%
+}
+\def\definer@i{%
+        \ifx\let@token\A@token%
+            \aftergroup\@firstoftwo%
+        \else
+            \aftergroup\@secondoftwo%
+        \fi%
+    \endgroup%
+    {(The next token is the letter "A".)}%
+    {(The next token is NOT the letter "A".)}%
+}
+
+define env and execute: |\edef\env{\execute{\definer A}}|
+
+\string\meaning\string\env: |\meaning\env|
+
+
+
+\section{\string\bgroup\ \& \string\egroup\ test}
+
+\def\definer{%
+    \bgroup%
+    \futurelet\let@token\definer@i%
+}
+\def\definer@i{%
+        \ifx\let@token\A@token%
+            \aftergroup\@firstoftwo%
+        \else
+            \aftergroup\@secondoftwo%
+        \fi%
+    \egroup%
+    {(The next token is the letter "A".)}{(The next token is NOT the letter "A".)}%
+}
+
+define env and execute: |\edef\env{\execute{\definer B}}|
+
+\string\meaning\string\env: |\meaning\env|
+
+
+
+\section{remaining braces test}
+
+\def\definer{%
+    {argument text}%
+}
+
+define env and execute: |\edef\env{\execute{\definer}}|
+
+\string\meaning\string\env: |\meaning\env|
+
+
+
+\section{lots of text \& \string\loop\ test}
+
+\newcount\loopcnt%
+\loopcnt=0 % The space is important here!
+|\execute{%
+    \loop%
+        This is many text.\space%
+        \advance\loopcnt1 % The space is important here!
+    \ifnum\loopcnt<40 % The space is important here!
+    \repeat%
+}|%
+
+Note that the last space before | is the same space as between every two sentences.
+
+
+
+\expandafter\section\expandafter{\string\par\ test}
+
+define \string\todef\ and execute: |\edef\todef{\execute{first line\par second line}}|%
+
+\string\meaning\string\todef: |\meaning\todef|
+
+simply expand and execute \string\todef: |\todef|
+
+
+
+\section{\string\protected\ tokens}
+% TODO do not expand \protected tokens in \execute{}
+
+\def\unprotectedTok{}
+\def\protectedTok{}
+\def\protect{\noexpand\protect\noexpand}
+
+%define \string\env\ and execute: |\edef\env{\execute{\unprotectedTok\protectedTok}}| =!= ||
+define \string\env\ and execute: |\edef\env{\execute{\unprotectedTok\protect\protectedTok}}| =!= ||
+
+\def\compare{\protect\protectedTok}
+
+%\string\meaning\string\env: |\meaning\env| =!= |\meaning\compare|
+\string\meaning\string\env: |\meaning\env| =!= |\meaning\compare|
+
+
+
+\section{test if group toks can be executed inside tex.runtoks()}
+
+\begingroup
+%\catcode`\_12 %
+\catcode`\[1 %
+\catcode`\]2 %
+\catcode`\{12 %
+\catcode`\}12 %
+
+\directlua[
+    left_brace_cmd  = token.command_id("left_brace" )
+    right_brace_cmd = token.command_id("right_brace")
+    left_brace_tok  = token.new(string.utfvalue("{"), left_brace_cmd )
+    right_brace_tok = token.new(string.utfvalue("}"), right_brace_cmd)
+]
+
+\def\test[outside definition of \string\test]
+
+\meaning\test
+
+\directlua[ tex.runtoks( function() token.put_next(left_brace_tok) end ) ]
+
+\def\test[inside definition of \string\test]
+
+\meaning\test
+
+\directlua[ tex.runtoks( function() token.put_next(right_brace_tok) end ) ]
+
+\meaning\test
+
+
+\endgroup
+
+\bye

@@ -1,0 +1,29 @@
+% !TeX spellcheck = en_US
+% !TeX encoding = UTF-8
+
+\ifx\execute\UNDEFINED
+
+% The file ltluatex.tex is part of (the normally distributed) LaTeX.
+% It defines useful macros and Lua functions to use with LuaTeX and LuaLaTeX.
+\input ltluatex % The space is important!
+
+\edef\EXECUTErestoreCatCodes
+{\let\noexpand\EXECUTErestoreCatCodes\noexpand\UNDEFINED
+    \catcode\number`\%=\the\catcode`\%\relax
+    \catcode\number`\_=\the\catcode`\_\relax
+}\catcode`\%=14\relax% The akward notation above is intended!
+\catcode`\_=12\relax% We assume that the backslash is the escapechar.
+
+% ==== main part of package
+
+% see LaTeX news 35 - Better allocator for Lua command ids
+\newluacmd\execute
+\directlua{
+    execute = require("execute")
+    lua.get_functions_table()[tex.count.allocationnumber] = execute.default_execute
+}
+
+% ==== end of package
+\EXECUTErestoreCatCodes
+
+\fi\endinput

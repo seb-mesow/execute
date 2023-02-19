@@ -1,0 +1,183 @@
+\ifx\latexenvGUARD\UNDEFINED
+\def\latexenvGUARD{latex-env.tex}
+
+\input latex-plain
+
+\edef\ltxenvOUTERCCs{\catcode`\noexpand\@=\the\catcode`\@\catcode`\noexpand\%=\the\catcode`\%\catcode`\noexpand\ =\the\catcode`\ }
+
+\catcode`\@=11
+\catcode`\%=14
+\catcode`\ =10
+% We assume from the calling context:
+% \catcode`\\==0
+% \catcode`\{==1
+% \catcode`\}==2
+
+% !TeX root = fsrprotocol3-cls
+
+\newcount\ltxenv@nestlevel%
+\ltxenv@nestlevel\z@%
+
+% LuaTeX's catcode tables are not suitable for this, because their values (the catcodes) are always global.
+% For short: This does not fit's good in the rest of TeX's register scheme
+% For long:
+% When you save the old values, then you would save the outer catcodes in a NEW outer catcode table.
+% When you restore, then you would set the current catcode table to the outer catcode table.
+% As a side effect the number of the catcode table differs in before saving and after restoring. 
+% This is not acceptable.
+% Then you my try to execute the following code snippet to fix the differing catcode table number.
+%     % set current catcode table to the same catcodes as the outer catcode table
+%     \savecatcodetable<old catcode table number>% This assignment is global!
+%     \catcodetable<old catcode table number>
+% But this has another side effect, which is relevant if the environment was executed inside a group:
+% When this group ends, then the catcode table number is restored.
+% This means, that all catcodes are updated accordning to the restored catcode table number.
+% But if at the beginning of the environment the current catcodetable did not represent the current catcodes
+% – Catcode tables are not automaticly updated. –
+% then after the group ends we changed the catcodes of these characters which their catcodes was not the same as in the catcode table, because the reassigment of the old catcodetable was global.
+
+\def\ltxenv@CCs{%
+    % except for @ this should be the normal \catcode's under LaTeX
+    \catcode`\\=0\relax% backslash is escapechar
+    \catcode`\{=1\relax% left brace is opening group
+    \catcode`\}=2\relax% right brace is closing group
+    \catcode`\$=3\relax% dollar sign is math shift
+    \catcode`\&=4\relax% ampersand is alignment tab
+    \catcode`\^^M=5\relax% return is endline
+    \catcode`\#=6\relax% hash mark is parameter
+    \catcode`\^=7\relax% caret is math superscript
+    \catcode`\_=8\relax% underscore is math subscript
+    \catcode`\ =10\relax% space is space
+    \catcode`\^^I=10\relax% tab is space
+    \catcode`\@=11\relax% at is also a letter
+    \catcode`\^^J=12\relax% line feed is an other char
+    \catcode`\~=13\relax% tilde is active
+    \catcode`\^^L=13\relax% form feed is active
+    \catcode`\^^K=13\relax% vertical tab is active
+    \catcode`\^^A=13\relax% Start of Heading is active
+    \catcode`\%=14\relax% percent sign is comment
+    \catcode`\^^@=15\relax% Null is invalid
+    \catcode`\^^?=15\relax% delete is invalid
+}%
+
+% #1 – char to save as \<char> e.g. \# or \^^M
+\def\ltxenv@saveCCs@help#1{%
+    \catcode`\noexpand#1=\the\catcode`#1\relax%
+}
+
+\def\ltxenv@saveCCs{%
+    \expandafter\edef\csname ltxenv@savedCCs@\the\ltxenv@nestlevel\endcsname{%
+        \ltxenv@saveCCs@help\\%
+        \ltxenv@saveCCs@help\{%
+        \ltxenv@saveCCs@help\}%
+        \ltxenv@saveCCs@help\$%
+        \ltxenv@saveCCs@help\&%
+        \ltxenv@saveCCs@help\^^M%
+        \ltxenv@saveCCs@help\#%
+        \ltxenv@saveCCs@help\^%
+        \ltxenv@saveCCs@help\_%
+        \ltxenv@saveCCs@help\ %
+        \ltxenv@saveCCs@help\^^I%
+        \ltxenv@saveCCs@help\@%
+        \ltxenv@saveCCs@help\^^J%
+        \ltxenv@saveCCs@help\~%
+        \ltxenv@saveCCs@help\^^L%
+        \ltxenv@saveCCs@help\^^K%
+        \ltxenv@saveCCs@help\^^A%
+        \ltxenv@saveCCs@help\%%
+        \ltxenv@saveCCs@help\^^@%
+        \ltxenv@saveCCs@help\^^?%
+    }%
+}
+
+\let\ltxenv@setCCs\ltxenv@CCs
+
+\def\ltxenv@restoreCCs{%
+    \csname ltxenv@savedCCs@\the\ltxenv@nestlevel\endcsname%
+}
+
+\def\ltxenv@saveSpecialChars{%
+    \expandafter\edef\csname ltxenv@restoreSavedSpecialChars@\the\ltxenv@nestlevel\endcsname{%
+        \endlinechar\the\endlinechar\relax%
+        \newlinechar\the\newlinechar\relax%
+        \escapechar\the\escapechar\relax%
+    }% 
+}%
+
+% This command is "safe under full expansion" (e.g. in an \edef) --
+% meaning, it does what it should do, when used in such a context.
+\def\ltxenv@setSpecialChars{%
+    % new special chars
+    \endlinechar\m@ne\relax% disable TeX's appending to \read or \input lines
+    \newlinechar\number`\^^J\relax% ^^J/CR/<return> is used for line breaks in \write's to the terminal, the log and other files and appended after each \write
+    \escapechar\number`\\\relax% backslash is escapechar for \string, \show, \meaning
+}%
+
+\def\ltxenv@restoreSpecialChars{%
+    \csname ltxenv@restoreSavedSpecialChars@\the\ltxenv@nestlevel\endcsname%
+}%
+
+\begingroup%
+\endlinechar=-1%
+\catcode63=14\relax? question mark
+\catcode124=0\relax? vertical bar
+|catcode92=12|relax? escape char
+|catcode37=12|relax? percent sign
+|catcode32=12|relax? space
+?|global|let|ltx@backslashchar=\?
+?|global|let|ltx@percentchar=%?
+?|global|let|ltx@spacechar= ?
+|gdef|ltx@backslashchar{\}?
+|gdef|ltx@percentchar{%}?
+|gdef|ltx@spacechar{ }?
+|endgroup
+
+% not usable inside an \edef
+\def\ltxenv@saveControlSymbols{%
+    \expandafter\let\csname ltxenv@savedControlSymbol@precentsign\the\ltxenv@nestlevel\endcsname=\%%
+    \expandafter\let\csname ltxenv@savedControlSymbol@space\the\ltxenv@nestlevel\endcsname=\ %
+    \expandafter\let\csname ltxenv@savedControlSymbol@backslash\the\ltxenv@nestlevel\endcsname=\\%
+}%
+
+% not usable inside an \edef
+\def\ltxenv@setControlSymbols{%
+    % The following should not make problems with docstrip
+    \let\%\ltx@percentchar%
+    \let\ \ltx@spacechar%
+    \let\\\ltx@backslashchar%
+}%
+
+% not useable inside an \edef
+\def\ltxenv@restoreControlSymbols{%
+    \expandafter\let\expandafter\%\expandafter=\csname ltxenv@savedControlSymbol@precentsign\the\ltxenv@nestlevel\endcsname%
+    \expandafter\let\expandafter\ \expandafter=\csname ltxenv@savedControlSymbol@space\the\ltxenv@nestlevel\endcsname%
+    \expandafter\let\expandafter\\\expandafter=\csname ltxenv@savedControlSymbol@backslash\the\ltxenv@nestlevel\endcsname%
+}%
+
+\def\ltxenv@start{%
+    \wlog{(start ltxenv}%
+    % nest level traceing
+    \advance\ltxenv@nestlevel\@ne%
+    % saving
+    \ltxenv@saveCCs%
+    \ltxenv@saveSpecialChars%
+    \ltxenv@saveControlSymbols%
+    % setting
+    \ltxenv@setCCs%
+    \ltxenv@setSpecialChars%
+    \ltxenv@setControlSymbols%
+}%
+\def\ltxenv@end{%
+    % restoring
+    \ltxenv@restoreCCs%
+    \ltxenv@restoreSpecialChars%
+    \ltxenv@restoreControlSymbols%
+    % nest level tracking
+    \advance\ltxenv@nestlevel\m@ne%
+    \wlog{ended ltxenv)}%
+}%
+
+
+\ltxenvOUTERCCs
+
+\fi\endinput

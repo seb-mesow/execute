@@ -1,0 +1,247 @@
+% !TeX root = fsrprotocol3-cls
+
+\ifx\latexplainGUARD\UNDEFINED
+\def\latexplainGUARD{latex-plain.tex}
+
+\catcode`\@=11% This is permanent
+
+% This is a (re-)implementation of some few commands definied in latex.ltx to work under plain TeX
+
+\def\makeatletter{%
+    \catcode`\@11\relax%
+}%
+
+\def\makeatother{%
+    \catcode`\@12\relax%
+}%
+
+% #1 – character
+\def\@makeother#1{%
+    \catcode`#1=12\relax%
+}%
+
+\long\def\@gobble#1{}%
+\long\def\@firstofone#1{#1}
+\let\@iden\@firstofone
+
+\long\def\@gobbletwo#1#2{}%
+\long\def\@firstoftwo#1#2{#1}%
+\long\def\@secondoftwo#1#2{#2}%
+
+% copied from latex.ltx
+\def\two@digits#1{%
+    \ifnum#1<10 % The space is important here!
+        0%
+    \fi%
+    \number#1 % The space is important here!
+}%
+
+\def\three@digits#1{%
+    \ifnum#1<100 % The space is important here!
+        0%
+    \fi%
+    \two@digits{#1}%
+}%
+
+\def\four@digits#1{%
+    \ifnum#1<1000 % The space is important here!
+        0%
+    \fi%
+    \three@digits{#1}%
+}%   
+
+% copied from ltdefns.dtx
+% #1 - token to test f1 against
+% #2 - true code
+% #3 - false code
+% f1 - very next token to test against #1
+\long\def\@ifnextchar#1#2#3{%
+    \let\reserved@d=#1%
+    \def\reserved@a{#2}%
+    \def\reserved@b{#3}%
+    \futurelet\@let@token\@ifnch% then comes f1
+}%
+
+% \reserved@d - token to test f1 against
+% \reserved@a - true  code
+% \reserved@b - false code
+% \@let@token - arbitary very next token to test if it is equal to \reserved@d
+\def\@ifnch{%
+    \ifx\@let@token\@sptoken%
+        \let\reserved@c\@xifnch%
+    \else%
+        \ifx\@let@token\reserved@d%
+            \let\reserved@c\reserved@a%
+        \else%
+            \let\reserved@c\reserved@b%
+        \fi%
+    \fi%
+    \reserved@c% what to do next: \xifnch or true code or false code
+}%
+
+\def\:{%
+    \let\@sptoken= % note the space
+}%
+\:  % this makes \@sptoken a <space token>
+
+\def\:{%
+    \@xifnch%
+}%
+\expandafter\def\: {%
+    \futurelet\@let@token\@ifnch%
+}%
+% equal to following pseudo code
+% 
+%     \def\@xifnch<space token>{%
+%         \futurelet\@let@token\@ifnch%
+%     }%
+% 
+% meaning \@xifnch gobbles a mandatory following space token and (re)starts \@ifnch
+
+\let\kernel@ifnextchar\@ifnextchar%
+
+% #1 - code which excepts an argument in brackets
+% #2 - default value for that argument
+\long\def\@testopt#1#2{%
+    \kernel@ifnextchar[{%
+        #1% call with provided optional argument in brackets which comes very next
+    }{%
+        #1[{#2}]% call with default value
+    }%
+}%
+
+% copied from ltplain.dtx
+\count10=22 % allocates \count registers 23, 24, ...
+\count11=9 % allocates \dimen registers 10, 11, ...
+\count12=9 % allocates \skip registers 10, 11, ...
+\count15=9 % allocates \toks registers 10, 11, ...
+\count16=-1 % allocates input streams 0, 1, ...
+\count17=-1 % allocates output streams 0, 1, ...
+
+% #1 - \csname for the type of register e.g. \dimen
+% #2 - \csname that defines the \csname for the new register
+% #3 - global counter, that counts all registers of that type
+% #4 - normal   maximum count of registers of that type (-1, if only the extented maximum should be relevant)
+% #5 - extented maximum count of registers of that type
+% #6 - new \csname for naming the register
+\def\e@alloc#1#2#3#4#5#6{%
+    \global\advance#3\@ne%
+    \e@ch@ck{#3}{#4}{#5}#1%
+    \allocationnumber#3\relax%
+    \global#2#6\allocationnumber%
+    \wlog{\string#6=\string#1\the\allocationnumber}%
+}%
+% #1 - global counter
+% #2 - normal maximum; if current global count is equal to this, jump the global count by 256
+% #3 - extented maximum
+% #4 - type \csname e.g. \dimen
+\gdef\e@ch@ck#1#2#3#4{%
+    \ifnum#1<#2 % The space is important here!
+    \else%
+        \ifnum#1=#2\relax%
+        \global#1\@cclvi%
+            \ifx\count#4%
+                \global\advance#1 10 % The space is important here!
+            \fi%
+        \fi%
+        \ifnum#1<#3\relax%
+        \else%
+            \errmessage{No room for a new \string#4}%
+        \fi%
+    \fi%
+}%
+
+\chardef\e@alloc@top=65535
+\let\e@alloc@chardef\chardef
+\let\float@count\e@alloc@top
+\countdef\insc@unt=20
+\countdef\allocationnumber=21
+
+% remove \outer attribute from definitions by plain.tex
+\let\newcount\@undefined
+\let\newdimen\@undefined
+\let\newtoks\@undefined
+\let\newread\@undefined
+\let\newwrite\@undefined
+
+% f1 - control sequence for the new dimen register
+\def\newdimen{\e@alloc\dimen\dimendef{\count11}\insc@unt\float@count}% \newdimencs follows
+% f1 - control sequence for the new count register
+\def\newcount{\e@alloc\count\countdef{\count10}\insc@unt\float@count}% \newcountcs follows
+% f1 - control sequence for the new toks register
+\def\newtoks{\e@alloc\toks\toksdef{\count15}\m@ne\e@alloc@top}% \newtokscs follows
+% f1 - control sequence for the new read stream
+\def\newread{\e@alloc\read\chardef{\count16}\m@ne\sixt@@n}% \newreadcs follows
+\ifx\directlua\@undefined%
+    % f1 - control sequence for the new write stream
+    \def\newwrite{\e@alloc\write\chardef{\count17}\m@ne\sixt@@n}% \newwritecs follows
+\else%
+    % f1 - control sequence for the new write stream
+    \def\newwrite{%
+        \e@alloc\write{\ifnum\allocationnumber=18 % The space is important here!
+                            \advance\count17\@ne%
+                            \allocationnumber\count17 % The space is important here!
+                        \fi%
+                        \global\chardef%
+        }{\count17}\m@ne{128}% \newwritecs follows
+    }%
+\fi%
+
+\ifx\e@alloc@ccodetable@count\@undefined%
+    \countdef\e@alloc@ccodetable@count=259 % The space is important here!
+\fi%
+% #1 - control sequence for the new catcodetable
+\def\newcatcodetable#1{%
+    \e@alloc\catcodetable\chardef\e@alloc@ccodetable@count\m@ne{"8000}#1%
+    \initcatcodetable\allocationnumber%
+}%
+\e@alloc@ccodetable@count=\z@%
+
+
+
+% copied from ltpar.dtx
+\newdimen\@savsk%
+\newcount\@savsf%
+
+\def\@bsphack{%
+    \relax%
+    \ifhmode%
+        \@savsk\lastskip%
+        \@savsf\spacefactor%
+    \fi%
+}%
+
+\def\@esphack{%
+    \relax%
+    \ifhmode%
+        \spacefactor\@savsf%
+        \ifdim\@savsk>\z@%
+            \ifdim\lastskip=\z@%
+                \nobreak%
+                \hskip\z@skip%
+            \fi%
+            \ignorespaces%
+        \fi%
+    \fi%
+}%
+
+% leaves only the replacement text of a \meaning<macro>
+% syntax: \expandafter\strip@prefix\meaning<macro>
+\def\strip@prefix#1>{}
+
+\def\@unexpandable@protect{%
+    \noexpand\protect\noexpand%
+}
+
+\let\@typeset@protect\relax
+\let\@not@protect\empty
+
+\def\set@display@protect{%
+    \let\protect\string%
+}
+
+\def\set@typeset@protect{%
+    \let\protect\@typeset@protect%
+}
+
+\fi\endinput%
