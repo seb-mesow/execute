@@ -1,8 +1,9 @@
 # execute
 
-This TeX package enables you to *execute* any token also within *expansion-only* contexts, e.g in `\edef{...}`.
+This TeX package enables you to *execute* any token also within *expansion-only* contexts, e.g in `\edef{...}` or `\write{...}`.
 
-**You do not need a special version of TeX.** But you must compile your document with **LuaTeX**.
+**You do not need a special version of TeX.**
+But you must compile your document with **LuaTeX**.
 
 *Execution* means *consuming* some tokens, evaluate them and *change the state* of TeX (most important parts of TeX's state). For example
 - `\def\todef{replacement text}` directs TeX to insert or redefine a macro in TeX's table of macros.
@@ -19,6 +20,74 @@ Whenever *execution* takes place (most often) also *expansion* takes place.
 - expand the then-branch or else-branch of a conditional (e.g. `\ifx`)
 - execute expandable built-in control sequences (e.g. `\number\mycount`)
 - some tokens expand to nothing (e.g. the macro `\empty`)
+
+**Issues are welcome!**
+
+## Usage
+
+This package provides the command sequence `\execute`, which scans a braced tokens (maybe with a `<filler>` in before).
+*The outer braces are mandatory!*
+Also if you have only one token to execute, you must surround it with braces.
+
+### Caution!
+
+**Because this control sequence complicates TeX even more, you must know what you do!**
+You should only use this control sequence if you are sure, that you have really no better solution for your problem.
+
+This package was created with the following in mind:
+Sometimes you have a macro from other people, that calls your code in an expansion-only context.
+But your code requires doing something very special and the only solution to your problem you can imagine off,
+requires executing something (especially defining a macro or setting a catcode.)
+But the package with the troubling macro does not provide another callback interface to execute this special solution in before.
+Or the special solution requires an argument which is only given in the called back code you provide to the troubling macro.
+This all while patching (meaning altering the code) of the troubling macro or patching the API of the package of the troubling macro raises concerns.
+(e.g. What if the troubling macro is rewritten and the patch fails.)
+
+Please study the following in depth before considering using this package in the following order
+1. your problem
+2. all solutions for your problem you can imagine off
+3. the public API of the package of the troubling macro
+4. the private interfaces of the package of the troubling macro
+5. other private macros of the package of the troubling macro
+6. *the code of the troubling macro*
+
+### Loading
+```
+\input execute.tex
+```
+
+### `\edef` example
+```
+// \mycount is 21.
+\edef\mytext{%
+    There are %
+    \execute{%
+        \multiply\mycount2\relax%
+    }%
+    \number\mycount%
+    \space numbers.%
+}
+// \mycount is 42.
+// The replacement text of \mytext is "There are 42 numbers." .
+```
+
+### `\write` example
+```
+\def\takeWithCare#1{%
+    \execute{%
+        \def\@tempa{#1}%
+        % do something with \@tempa and change its replacement text
+    }%
+    // The replacment text of \@tempa is "<care>#1</care>" .
+    \@tempa% expand to something special.
+}%
+...
+\write\@auxout{%
+    Some \takeWithCare{things} must be taken with \takeWithCare{care}.%
+}
+// writes the following to the .aux file:
+// "Some <care>things</care> must be taken with <care>care</care>."
+```
 
 ## How Does it Work
 
@@ -112,4 +181,3 @@ Because `end_local_control()` was indirectly called by `tex.quittoks()`,
 `local_control()` returns to `runtoks(lua_State*)` resp. `tex.runtoks()`,
 which in turn returns to `execute_token(cur_tok)`, which in turn returns to `execute(...)`.
 Before `execute(...)` exits, it reinserts/prepends the remaining tokens.
-
