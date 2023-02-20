@@ -2,8 +2,8 @@
 
 This TeX package enables you to *execute* any token also within *expansion-only* contexts, e.g in `\edef{...}` or `\write{...}`.
 
-**You do not need a special version of TeX.**
-But you must compile your document with **LuaTeX**.
+**It does *not* require a special version of TeX.**<br>
+But it requires **LuaTeX**.
 
 *Execution* means *consuming* some tokens, evaluate them and *change the state* of TeX (most important parts of TeX's state). For example
 - `\def\todef{replacement text}` directs TeX to insert or redefine a macro in TeX's table of macros.
@@ -23,25 +23,19 @@ Whenever *execution* takes place (most often) also *expansion* takes place.
 
 **Issues are welcome!**
 
-## Usage
+## Caution!
 
-This package provides the command sequence `\execute`, which scans a braced tokens (maybe with a `<filler>` in before).
-*The outer braces are mandatory!*
-Also if you have only one token to execute, you must surround it with braces.
-
-### Caution!
-
-**Because this control sequence complicates TeX even more, you must know what you do!**
+**Because this control sequence complicates TeX even more, you must know what you do!**<br>
 You should only use this control sequence if you are sure, that you have really no better solution for your problem.
 
-This package was created with the following in mind:
+This package was created with the following in mind:<br>
 Sometimes you have a macro from other people, that calls your code in an expansion-only context.
 But your code requires doing something very special and the only solution to your problem you can imagine off,
-requires executing something (especially defining a macro or setting a catcode.)
+requires executing something (especially defining a macro or setting a catcode).
 But the package with the troubling macro does not provide another callback interface to execute this special solution in before.
 Or the special solution requires an argument which is only given in the called back code you provide to the troubling macro.
-This all while patching (meaning altering the code) of the troubling macro or patching the API of the package of the troubling macro raises concerns.
-(e.g. What if the troubling macro is rewritten and the patch fails.)
+This all while patching (meaning altering the code) of the troubling macro or patching the API of the package of the troubling macro raises more concerns.
+(e.g. What if the troubling macro is rewritten and the patch fails?)
 
 Please study the following in depth before considering using this package in the following order
 1. your problem
@@ -50,6 +44,12 @@ Please study the following in depth before considering using this package in the
 4. the private interfaces of the package of the troubling macro
 5. other private macros of the package of the troubling macro
 6. *the code of the troubling macro*
+
+## Usage
+
+This package provides the command sequence `\execute`, which scans balanced braced tokens (maybe with a `<filler>` in before).<br>
+*The outer braces are mandatory!*
+Also if you have only one token to execute, you must surround it with braces.
 
 ### Loading
 ```
@@ -78,7 +78,7 @@ Please study the following in depth before considering using this package in the
         \def\@tempa{#1}%
         % do something with \@tempa and change its replacement text
     }%
-    // The replacment text of \@tempa is "<care>#1</care>" .
+    // The replacment text of \@tempa is "#1", but in uppercase.
     \@tempa% expand to something special.
 }%
 ...
@@ -86,7 +86,7 @@ Please study the following in depth before considering using this package in the
     Some \takeWithCare{things} must be taken with \takeWithCare{care}.%
 }
 // writes the following to the .aux file:
-// "Some <care>things</care> must be taken with <care>care</care>."
+// "Some THINGS must be taken with CARE."
 ```
 
 ## How Does it Work
@@ -109,6 +109,7 @@ This prepends two *internal* tokens to the input stack:
   Because `extension_cmd` is less than `max_command_cmd`, this token is unexpandable.
   But thus the jump_table can be consulted to execute this token.
   For this token `end_local_control()` is executed.
+
 The `lua_local_call_cmd` token is read before the `end_local_code` token.
 
 Then `runtoks(lua_State*)` calls `local_control()`.
@@ -181,3 +182,4 @@ Because `end_local_control()` was indirectly called by `tex.quittoks()`,
 `local_control()` returns to `runtoks(lua_State*)` resp. `tex.runtoks()`,
 which in turn returns to `execute_token(cur_tok)`, which in turn returns to `execute(...)`.
 Before `execute(...)` exits, it reinserts/prepends the remaining tokens.
+(These are those token no token filter decided to call `execute_token(cur_tok)` with it.)
